@@ -54,3 +54,5 @@ llm-context-files.txt
 # Log files
 *.log
 logs/
+
+*.pdf
