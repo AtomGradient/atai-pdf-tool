@@ -17,7 +17,7 @@ def extract_text_with_ocr(pdf_path: str, page_num: int, lang: str = "eng") -> st
     # Read page as image
     doc = fitz.open(pdf_path)
     page = doc.load_page(page_num)
-    pix = page.get_pixmap()
+    pix = page.get_pixmap(dpi=300)
     img_bytes = pix.tobytes("png")
     img = Image.open(io.BytesIO(img_bytes))
     
@@ -160,7 +160,7 @@ def ocr_pdf(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, 
         page = doc.load_page(page_num)
         
         # Get image from page
-        pix = page.get_pixmap()
+        pix = page.get_pixmap(dpi=300)
         img_bytes = pix.tobytes("png")
         img = Image.open(io.BytesIO(img_bytes))
 
