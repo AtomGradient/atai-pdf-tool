@@ -8,10 +8,6 @@ A command-line tool for parsing and extracting text from PDF files with OCR capa
 pip install atai-pdf-tool
 ```
 
-### Prerequisites
-
-This tool requires Tesseract OCR to be installed on your system. Visit [Tesseract OCR Installation Guide](https://tesseract-ocr.github.io/tessdoc/Installation.html) for installation instructions.
-
 ## Usage
 
 ### Command Line Interface
@@ -37,36 +33,18 @@ Options:
 
 ### Supported Languages
 
-The language option (`-l`, `--lang`) accepts language codes supported by Tesseract OCR. Some common ones include:
+The language option (`-l`, `--lang`) accepts language codes supported by EasyOCR. Some common ones include:
 
-- `eng`: English
-- `chi_sim`: Simplified Chinese
-- `chi_tra`: Traditional Chinese
-- `fra`: French
-- `deu`: German
-- `jpn`: Japanese
-- `kor`: Korean
-- `spa`: Spanish
+- `en`: English
+- `ch_sim`: Simplified Chinese
+- `ch_tra`: Traditional Chinese
+- `fr`: French
+- `de`: German
+- `jp`: Japanese
+- `ko`: Korean
+- `sp`: Spanish
 
-For a complete list of language codes, see the [Tesseract documentation](https://tesseract-ocr.github.io/tessdoc/Data-Files-in-different-versions.html).
-
-### Language Installation
-
-To use different languages with OCR, you need to install the corresponding language packs for Tesseract:
-
-**Ubuntu/Debian:**
-```bash
-sudo apt-get install tesseract-ocr-chi-sim  # For Simplified Chinese
-sudo apt-get install tesseract-ocr-fra      # For French
-```
-
-**macOS (Homebrew):**
-```bash
-brew install tesseract-lang  # Installs all language packs
-```
-
-**Windows:**
-During Tesseract installation, select "Additional language data" and check the languages you need.
+For a complete list of language codes, see the [EasyOCR documentation](https://www.jaided.ai/easyocr/).
 
 ### As a Python module
 
@@ -93,7 +71,7 @@ french_ocr_text = ocr_pdf("french_document.pdf", lang="fra")
 
 - Extract text from PDF documents
 - Automatic fallback to OCR when text extraction fails
-- Support for multiple languages via Tesseract OCR
+- Support for multiple languages via EasyOCR
 - Progress bar for tracking processing of large documents
 - Clean and normalize extracted text
 - Save results in JSON format or print to stdout
