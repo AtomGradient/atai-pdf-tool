@@ -1,7 +1,3 @@
-Here’s a modified version of the README incorporating your updates for enhanced performance options and usage examples:
-
----
-
 # atai-pdf-tool
 
 A command-line tool for parsing and extracting text from PDF files with OCR capabilities and performance optimization options.
