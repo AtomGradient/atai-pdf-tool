@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "atai-pdf-tool"
-version = "0.0.8"
+version = "0.0.9"
 description = "A tool for parsing and extracting text from PDF files with OCR capabilities"
 readme = "README.md"
 authors = [

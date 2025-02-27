@@ -11,13 +11,21 @@ from PIL import Image
 from PyPDF2 import PdfReader
 from tqdm import tqdm
 
+import concurrent.futures
+import multiprocessing
 
-def extract_text_with_ocr(pdf_path: str, page_num: int, lang: str = "en") -> str:
-    """Extract text from a PDF page using OCR."""
-    # Read page as image
+
+def extract_text_with_ocr(pdf_path: str, page_num: int, reader=None, lang: str = "en", 
+                         dpi: int = 200, use_gpu: bool = False) -> str:
+    """Extract text from a PDF page using OCR with optimizations."""
+    # Reuse reader if provided (for batch processing)
+    if reader is None:
+        reader = easyocr.Reader([lang], gpu=use_gpu)
+    
+    # Read page as image with configurable DPI
     doc = fitz.open(pdf_path)
     page = doc.load_page(page_num)
-    pix = page.get_pixmap(dpi=300)
+    pix = page.get_pixmap(dpi=dpi)
     img_bytes = pix.tobytes("png")
     img = Image.open(io.BytesIO(img_bytes))
     
@@ -26,9 +34,6 @@ def extract_text_with_ocr(pdf_path: str, page_num: int, lang: str = "en") -> str
         temp_img_path = temp_file.name
         img.save(temp_img_path)
         
-    # Initialize EasyOCR reader with the specified language(s)
-    reader = easyocr.Reader([lang])
-    
     # Extract text using EasyOCR
     result = reader.readtext(temp_img_path)
     
@@ -54,7 +59,9 @@ def is_valid_text(text: str) -> bool:
     return False
 
 
-def extract_pdf_pages(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, lang: str = "en") -> str:
+def extract_pdf_pages(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, 
+                     lang: str = "en", dpi: int = 200, ocr_threshold: int = 50, 
+                     use_gpu: bool = False) -> str:
     """Extract text from PDF pages, using OCR if necessary."""
     with open(pdf_path, 'rb') as file:
         pdf_reader = PdfReader(file)
@@ -72,18 +79,80 @@ def extract_pdf_pages(pdf_path: str, start_page: int = 0, end_page: Optional[int
             
         text = ''
         page_range = range(start_page, end_page + 1)
+        
+        # Initialize OCR reader once (reuse for all pages)
+        reader = easyocr.Reader([lang], gpu=use_gpu) if use_gpu else None
+        
         iterator = tqdm(page_range, desc="Extracting text", unit="page")
 
         for page_num in iterator:
             page = pdf_reader.pages[page_num]
             page_text = page.extract_text()
-            if page_text and is_valid_text(page_text):
+            
+            # Use simpler validation with threshold
+            if page_text and len(page_text.strip()) > ocr_threshold:
                 text += page_text
             else:
-                # If text extraction fails, use OCR
+                # If text extraction fails or minimal text, use OCR
                 iterator.set_description(f"Using OCR on page {page_num}")
-                text += extract_text_with_ocr(pdf_path, page_num, lang=lang)
+                text += extract_text_with_ocr(pdf_path, page_num, reader, lang=lang, dpi=dpi, use_gpu=use_gpu)
+        
         return text
+
+def extract_pdf_pages_parallel(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, 
+                              lang: str = "en", dpi: int = 200, ocr_threshold: int = 50, 
+                              max_workers: Optional[int] = None, use_gpu: bool = False) -> str:
+    """Extract text from PDF pages in parallel, using OCR if necessary."""
+    # Determine number of workers based on CPU cores if not specified
+    if max_workers is None:
+        max_workers = min(multiprocessing.cpu_count(), 4)  # Limit to prevent excessive memory usage
+    
+    with open(pdf_path, 'rb') as file:
+        pdf_reader = PdfReader(file)
+        total_pages = len(pdf_reader.pages)
+        
+        if start_page < 0 or start_page >= total_pages:
+            print(f"Invalid start page number. Using 0 instead of {start_page}.")
+            start_page = 0
+            
+        if end_page is None:
+            end_page = total_pages - 1
+        elif end_page < start_page or end_page >= total_pages:
+            print(f"Invalid end page number. Using {total_pages - 1} instead of {end_page}.")
+            end_page = total_pages - 1
+        
+        # Create arguments for parallel processing
+        page_range = range(start_page, end_page + 1)
+        args_list = [(pdf_path, page_num, lang, dpi, ocr_threshold, use_gpu) for page_num in page_range]
+        
+        all_text = []
+        
+        # Process pages in parallel with progress bar
+        with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(process_page, args) for args in args_list]
+            
+            for future in tqdm(concurrent.futures.as_completed(futures), 
+                              total=len(futures), desc="Extracting text", unit="page"):
+                all_text.append(future.result())
+                
+        return ''.join(all_text)        
+
+def process_page(args):
+    """Process a single page for parallel execution."""
+    pdf_path, page_num, lang, dpi, ocr_threshold, use_gpu = args
+    
+    # Try standard extraction first
+    doc = fitz.open(pdf_path)
+    page = doc.load_page(page_num)
+    page_text = page.get_text()
+    
+    # Quick check if text is valid
+    if len(page_text.strip()) > ocr_threshold:
+        return page_text
+    
+    # If text extraction fails or returns minimal text, use OCR
+    reader = easyocr.Reader([lang], gpu=use_gpu)
+    return extract_text_with_ocr(pdf_path, page_num, reader, lang, dpi, use_gpu)
 
 
 def clean_text(text: str) -> str:
@@ -138,7 +207,8 @@ def save_raw_json(text: str, output_file: str) -> None:
 
 
 
-def ocr_pdf(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, lang: str = "en") -> str:
+def ocr_pdf(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, 
+           lang: str = "en", dpi: int = 200, use_gpu: bool = False) -> str:
     """Extract text from an entire PDF using OCR, with support for page range."""
     doc = fitz.open(pdf_path)
     text = ""
@@ -149,7 +219,7 @@ def ocr_pdf(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, 
         end_page = total_pages - 1
     
     # Initialize EasyOCR reader
-    reader = easyocr.Reader([lang])
+    reader = easyocr.Reader([lang], gpu=use_gpu)
 
     # Wrap with tqdm for progress bar if requested
     page_range = range(start_page, end_page + 1)
@@ -159,8 +229,8 @@ def ocr_pdf(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, 
         # Get page
         page = doc.load_page(page_num)
         
-        # Get image from page
-        pix = page.get_pixmap(dpi=300)
+        # Get image from page with configurable DPI
+        pix = page.get_pixmap(dpi=dpi)
         img_bytes = pix.tobytes("png")
         img = Image.open(io.BytesIO(img_bytes))
 
@@ -178,5 +248,100 @@ def ocr_pdf(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, 
         
         # Clean up the temporary image file
         os.remove(temp_img_path)
+    
+    return text
+
+
+def ocr_pdf_parallel(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, 
+                   lang: str = "en", dpi: int = 200, max_workers: Optional[int] = None,
+                   use_gpu: bool = False) -> str:
+    """Extract text from an entire PDF using OCR in parallel."""
+    # Determine number of workers
+    if max_workers is None:
+        max_workers = min(multiprocessing.cpu_count(), 4)
+    
+    doc = fitz.open(pdf_path)
+    
+    # If end_page is None, process all pages from start_page
+    total_pages = len(doc)
+    if end_page is None or end_page >= total_pages:
+        end_page = total_pages - 1
+    
+    # Create arguments for parallel processing
+    page_range = range(start_page, end_page + 1)
+    
+    def process_ocr_page(page_num):
+        # Create reader per process to avoid sharing issues
+        reader = easyocr.Reader([lang], gpu=use_gpu)
+        return extract_text_with_ocr(pdf_path, page_num, reader, lang, dpi, use_gpu)
+    
+    all_text = []
+    
+    # Process pages in parallel with progress bar
+    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(process_ocr_page, page_num) for page_num in page_range]
+        
+        for future in tqdm(concurrent.futures.as_completed(futures), 
+                         total=len(futures), desc="OCR processing", unit="page"):
+            all_text.append(future.result())
+            
+    return ''.join(all_text)
+
+
+def batch_ocr_pdf(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, 
+                 lang: str = "en", dpi: int = 200, batch_size: int = 5,
+                 use_gpu: bool = False) -> str:
+    """Extract text with OCR in batches for better performance."""
+    doc = fitz.open(pdf_path)
+    text = ""
+    
+    # If end_page is None, process all pages from start_page
+    total_pages = len(doc)
+    if end_page is None or end_page >= total_pages:
+        end_page = total_pages - 1
+    
+    # Initialize EasyOCR reader (use once)
+    reader = easyocr.Reader([lang], gpu=use_gpu)
+
+    # Process pages in batches
+    page_range = range(start_page, end_page + 1)
+    
+    # Process in batches with progress bar
+    with tqdm(total=len(page_range), desc="Batch OCR processing", unit="page") as pbar:
+        for i in range(start_page, end_page + 1, batch_size):
+            batch_pages = range(i, min(i + batch_size, end_page + 1))
+            
+            # Prepare batch images
+            images = []
+            temp_paths = []
+            
+            for page_num in batch_pages:
+                page = doc.load_page(page_num)
+                pix = page.get_pixmap(dpi=dpi)
+                img_bytes = pix.tobytes("png")
+                img = Image.open(io.BytesIO(img_bytes))
+                
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
+                    temp_img_path = temp_file.name
+                    img.save(temp_img_path)
+                    temp_paths.append(temp_img_path)
+                    images.append(temp_img_path)
+            
+            # Process batch with OCR
+            batch_results = []
+            for img_path in images:
+                result = reader.readtext(img_path)
+                page_text = ' '.join([item[1] for item in result])
+                batch_results.append(page_text)
+            
+            # Add to final text
+            text += ''.join(batch_results)
+            
+            # Clean up temporary files
+            for temp_path in temp_paths:
+                os.remove(temp_path)
+            
+            # Update progress bar
+            pbar.update(len(batch_pages))
     
     return text
