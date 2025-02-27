@@ -21,7 +21,7 @@ atai-pdf-tool path/to/your/document.pdf
 With options:
 
 ```bash
-atai-pdf-tool path/to/your/document.pdf -s 2 -e 5 -o output.json -l eng
+atai-pdf-tool path/to/your/document.pdf -s 2 -e 5 -o output.json -l en
 ```
 
 Options:
@@ -29,7 +29,7 @@ Options:
 - `-e`, `--end-page`: Ending page number (0-indexed, default: last page)
 - `-o`, `--output`: Output JSON file path (if not provided, prints to stdout)
 - `--ocr-only`: Use OCR for all pages regardless of extractable text
-- `-l`, `--lang`: Language for OCR processing (default: eng)
+- `-l`, `--lang`: Language for OCR processing (default: en)
 
 ### Supported Languages
 
@@ -52,7 +52,7 @@ For a complete list of language codes, see the [EasyOCR documentation](https://w
 from atai_pdf_tool.parser import extract_pdf_pages, ocr_pdf, save_as_json
 
 # Extract text from specific pages with English OCR
-text = extract_pdf_pages("document.pdf", start_page=0, end_page=5, lang="eng")
+text = extract_pdf_pages("document.pdf", start_page=0, end_page=5, lang="en")
 
 # Extract text with different language
 chinese_text = extract_pdf_pages("chinese_document.pdf", lang="chi_sim")

@@ -12,7 +12,7 @@ from PyPDF2 import PdfReader
 from tqdm import tqdm
 
 
-def extract_text_with_ocr(pdf_path: str, page_num: int, lang: str = "eng") -> str:
+def extract_text_with_ocr(pdf_path: str, page_num: int, lang: str = "en") -> str:
     """Extract text from a PDF page using OCR."""
     # Read page as image
     doc = fitz.open(pdf_path)
@@ -54,7 +54,7 @@ def is_valid_text(text: str) -> bool:
     return False
 
 
-def extract_pdf_pages(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, lang: str = "eng") -> str:
+def extract_pdf_pages(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, lang: str = "en") -> str:
     """Extract text from PDF pages, using OCR if necessary."""
     with open(pdf_path, 'rb') as file:
         pdf_reader = PdfReader(file)
@@ -138,7 +138,7 @@ def save_raw_json(text: str, output_file: str) -> None:
 
 
 
-def ocr_pdf(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, lang: str = "eng") -> str:
+def ocr_pdf(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, lang: str = "en") -> str:
     """Extract text from an entire PDF using OCR, with support for page range."""
     doc = fitz.open(pdf_path)
     text = ""

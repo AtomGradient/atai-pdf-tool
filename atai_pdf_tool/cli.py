@@ -32,8 +32,8 @@ def main():
     )
     parser.add_argument(
         "-l", "--lang", 
-        default="eng", 
-        help="Language for OCR (default: eng). Use format like 'eng', 'chi_sim', 'fra', etc."
+        default="en", 
+        help="Language for OCR (default: en). Use format like 'en', 'ch_sim', 'fr', etc."
     )
 
     args = parser.parse_args()
