@@ -56,3 +56,4 @@ llm-context-files.txt
 logs/
 
 *.pdf
+*.json
