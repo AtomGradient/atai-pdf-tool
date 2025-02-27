@@ -7,6 +7,7 @@ import fitz  # PyMuPDF
 import pytesseract
 from PIL import Image
 from PyPDF2 import PdfReader
+from tqdm import tqdm
 
 
 def extract_text_with_ocr(pdf_path: str, page_num: int, lang: str = "eng") -> str:
@@ -52,13 +53,17 @@ def extract_pdf_pages(pdf_path: str, start_page: int = 0, end_page: Optional[int
             end_page = total_pages - 1
             
         text = ''
-        for page_num in range(start_page, end_page + 1):
+        page_range = range(start_page, end_page + 1)
+        iterator = tqdm(page_range, desc="Extracting text", unit="page")
+
+        for page_num in iterator:
             page = pdf_reader.pages[page_num]
             page_text = page.extract_text()
             if page_text and is_valid_text(page_text):
                 text += page_text
             else:
                 # If text extraction fails, use OCR
+                iterator.set_description(f"Using OCR on page {page_num}")
                 text += extract_text_with_ocr(pdf_path, page_num, lang=lang)
         return text
 
@@ -103,8 +108,12 @@ def ocr_pdf(pdf_path: str, lang: str = "eng") -> str:
     """Extract text from an entire PDF using OCR."""
     doc = fitz.open(pdf_path)
     text = ""
-    
-    for page_num in range(len(doc)):
+
+    # Wrap with tqdm for progress bar if requested
+    page_range = range(len(doc))
+    iterator = tqdm(page_range, desc="OCR processing", unit="page")
+
+    for page_num in iterator:
         # Get page
         page = doc.load_page(page_num)
         

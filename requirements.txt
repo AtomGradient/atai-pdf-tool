@@ -1,5 +1,6 @@
 PyPDF2
 PyMuPDF
 pytesseract
+tqdm
 Pillow
 PyCryptodome
