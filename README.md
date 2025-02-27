@@ -34,7 +34,6 @@ Options:
 - `-o`, `--output`: Output JSON file path (if not provided, prints to stdout)
 - `--ocr-only`: Use OCR for all pages regardless of extractable text
 - `-l`, `--lang`: Language for OCR processing (default: eng)
-- `--no-progress`: Hide the progress bar (progress is shown by default)
 
 ### Supported Languages
 
