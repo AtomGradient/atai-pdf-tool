@@ -2,3 +2,5 @@ PyPDF2
 PyMuPDF
 easyocr
 tqdm
+opencv-python
+numpy

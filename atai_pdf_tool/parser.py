@@ -5,6 +5,8 @@ import os
 import tempfile
 from typing import Optional, Dict, Any
 
+import cv2
+import numpy as np
 import fitz  # PyMuPDF
 import easyocr
 from PIL import Image
@@ -12,19 +14,69 @@ from PyPDF2 import PdfReader
 from tqdm import tqdm
 
 
+def rotate_image(image: np.ndarray) -> np.ndarray:
+    """Detect the rotation angle and correct it."""
+    # Convert the image to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+    # Apply thresholding to make the image binary
+    _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
+    
+    # Detect edges using the Hough Line Transform
+    lines = cv2.HoughLinesP(thresh, 1, np.pi / 180, 200, minLineLength=100, maxLineGap=10)
+    
+    # If lines are detected, estimate the angle of rotation
+    if lines is not None:
+        # Calculate the angle of rotation based on the first line
+        line = lines[0]
+        x1, y1, x2, y2 = line[0]
+        angle = np.arctan2(y2 - y1, x2 - x1) * 180.0 / np.pi
+        # Rotate the image to correct the text
+        (h, w) = image.shape[:2]
+        center = (w // 2, h // 2)
+        matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+        rotated_image = cv2.warpAffine(image, matrix, (w, h))
+        return rotated_image
+    else:
+        return image  # If no lines are detected, return the image as is
+
+
+def preprocess_image(image: np.ndarray) -> np.ndarray:
+    """Preprocess image for better OCR accuracy."""
+    # Convert to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+    # Apply binary thresholding
+    _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
+    
+    # Denoising
+    denoised = cv2.fastNlMeansDenoising(thresh, None, 30, 7, 21)
+    
+    return denoised
+
+
 def extract_text_with_ocr(pdf_path: str, page_num: int, lang: str = "eng") -> str:
     """Extract text from a PDF page using OCR."""
     # Read page as image
     doc = fitz.open(pdf_path)
     page = doc.load_page(page_num)
-    pix = page.get_pixmap()
+    pix = page.get_pixmap(dpi=300)
     img_bytes = pix.tobytes("png")
+    
+    # Convert image bytes to a numpy array
     img = Image.open(io.BytesIO(img_bytes))
+    img_np = np.array(img)
+    
+    # Rotate the image if necessary
+    rotated_img = rotate_image(img_np)
+    
+    # Convert the rotated image back to a PIL image
+    rotated_pil_img = Image.fromarray(rotated_img)
     
     # Save the image to a temporary file
     with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
         temp_img_path = temp_file.name
-        img.save(temp_img_path)
+        rotated_pil_img.save(temp_img_path)
         
     # Initialize EasyOCR reader with the specified language(s)
     reader = easyocr.Reader([lang])
@@ -160,14 +212,22 @@ def ocr_pdf(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, 
         page = doc.load_page(page_num)
         
         # Get image from page
-        pix = page.get_pixmap()
+        pix = page.get_pixmap(dpi=300)
         img_bytes = pix.tobytes("png")
+        # Convert image bytes to a numpy array
         img = Image.open(io.BytesIO(img_bytes))
+        img_np = np.array(img)
+        
+        # Rotate the image if necessary
+        rotated_img = rotate_image(img_np)
+        
+        # Convert the rotated image back to a PIL image
+        rotated_pil_img = Image.fromarray(rotated_img)
 
         # Save the image to a temporary file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
             temp_img_path = temp_file.name
-            img.save(temp_img_path)
+            rotated_pil_img.save(temp_img_path)
 
         # Extract text using EasyOCR
         result = reader.readtext(temp_img_path)
