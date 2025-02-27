@@ -40,7 +40,12 @@ def main():
 
     try:
         if args.ocr_only:
-            extracted_text = ocr_pdf(args.pdf_path, lang=args.lang)
+            extracted_text = ocr_pdf(
+                args.pdf_path, 
+                args.start_page, 
+                args.end_page,
+                lang=args.lang,
+            )
         else:
             extracted_text = extract_pdf_pages(
                 args.pdf_path, 
@@ -51,6 +56,7 @@ def main():
         
         if args.output:
             save_as_json(extracted_text, args.output)
+            #save_raw_json(extracted_text, 'raw.json')
             print(f"Text extracted and saved to {args.output} in JSON format.")
         else:
             print(extracted_text)
