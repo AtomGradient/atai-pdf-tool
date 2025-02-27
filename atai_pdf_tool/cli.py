@@ -35,9 +35,9 @@ def main():
         default="eng", 
         help="Language for OCR (default: eng). Use format like 'eng', 'chi_sim', 'fra', etc."
     )
-    
+
     args = parser.parse_args()
-    
+
     try:
         if args.ocr_only:
             extracted_text = ocr_pdf(args.pdf_path, lang=args.lang)
@@ -46,7 +46,7 @@ def main():
                 args.pdf_path, 
                 args.start_page, 
                 args.end_page,
-                lang=args.lang
+                lang=args.lang,
             )
         
         if args.output:
