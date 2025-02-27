@@ -28,7 +28,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "atai-pdf-tool=atai-pdf-tool.cli:main",
+            "atai-pdf-tool=atai_pdf_tool.cli:main",
         ],
     },
 )
