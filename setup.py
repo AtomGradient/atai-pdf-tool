@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="atai-pdf-tool",
-    version="0.0.3",
+    version="0.0.6",
     author="AtomGradient",
     author_email="alex@atomgradient.com",
     description="A tool for parsing and extracting text from PDF files with OCR capabilities",
@@ -22,9 +22,8 @@ setup(
     install_requires=[
         "PyPDF2",
         "PyMuPDF",
-        "pytesseract",
-        "Pillow",
-        "PyCryptodome"
+        "easyocr",
+        "tqdm"
     ],
     entry_points={
         "console_scripts": [

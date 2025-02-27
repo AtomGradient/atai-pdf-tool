@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "atai-pdf-tool"
-version = "0.0.3"
+version = "0.0.6"
 description = "A tool for parsing and extracting text from PDF files with OCR capabilities"
 readme = "README.md"
 authors = [
@@ -21,10 +21,8 @@ requires-python = ">=3.7"
 dependencies = [
     "PyPDF2",
     "PyMuPDF",
-    "pytesseract",
-    "tqdm",
-    "Pillow",
-    "PyCryptodome",
+    "easyocr",
+    "tqdm"
 ]
 
 [project.urls]
