@@ -125,17 +125,21 @@ def extract_pdf_pages_parallel(pdf_path: str, start_page: int = 0, end_page: Opt
         page_range = range(start_page, end_page + 1)
         args_list = [(pdf_path, page_num, lang, dpi, ocr_threshold, use_gpu) for page_num in page_range]
         
-        all_text = []
-        
         # Process pages in parallel with progress bar
+        results = []
         with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(process_page, args) for args in args_list]
+            # Map maintains the order of submission
+            futures_to_page = {executor.submit(process_page, args): args[1] for args in args_list}
             
-            for future in tqdm(concurrent.futures.as_completed(futures), 
-                              total=len(futures), desc="Extracting text", unit="page"):
-                all_text.append(future.result())
-                
-        return ''.join(all_text)        
+            for future in tqdm(concurrent.futures.as_completed(futures_to_page), 
+                              total=len(futures_to_page), desc="Extracting text", unit="page"):
+                page_num = futures_to_page[future]
+                text = future.result()
+                results.append((page_num, text))
+        
+        # Sort results by page number to maintain order
+        results.sort(key=lambda x: x[0])
+        return ''.join([text for _, text in results])       
 
 def process_page(args):
     """Process a single page for parallel execution."""
@@ -275,17 +279,21 @@ def ocr_pdf_parallel(pdf_path: str, start_page: int = 0, end_page: Optional[int]
         reader = easyocr.Reader([lang], gpu=use_gpu)
         return extract_text_with_ocr(pdf_path, page_num, reader, lang, dpi, use_gpu)
     
-    all_text = []
-    
     # Process pages in parallel with progress bar
+    results = []
     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(process_ocr_page, page_num) for page_num in page_range]
+        # Submit all tasks and keep track of page numbers
+        future_to_page = {executor.submit(process_ocr_page, page_num): page_num for page_num in page_range}
         
-        for future in tqdm(concurrent.futures.as_completed(futures), 
-                         total=len(futures), desc="OCR processing", unit="page"):
-            all_text.append(future.result())
+        for future in tqdm(concurrent.futures.as_completed(future_to_page), 
+                         total=len(future_to_page), desc="OCR processing", unit="page"):
+            page_num = future_to_page[future]
+            text = future.result()
+            results.append((page_num, text))
             
-    return ''.join(all_text)
+    # Sort results by page number to maintain order
+    results.sort(key=lambda x: x[0])
+    return ''.join([text for _, text in results])
 
 
 def batch_ocr_pdf(pdf_path: str, start_page: int = 0, end_page: Optional[int] = None, 

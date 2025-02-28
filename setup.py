@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="atai-pdf-tool",
-    version="0.1.0",
+    version="0.1.1",
     author="AtomGradient",
     author_email="alex@atomgradient.com",
     description="A tool for parsing and extracting text from PDF files with OCR capabilities",
