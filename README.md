@@ -15,6 +15,10 @@ pip install atai-pdf-tool
 #### Basic Usage with Default Settings
 
 ```bash
+atai-pdf-tool path/to/your/document.pdf
+```
+
+```bash
 atai-pdf-tool path/to/your/document.pdf -o output.json
 ```
 
